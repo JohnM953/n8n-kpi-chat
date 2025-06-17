@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>n8n KPI Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+    }
+    #chat-box {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 400px;
+      overflow-y: scroll;
+      background: #f9f9f9;
+    }
+    .message {
+      margin: 10px 0;
+    }
+    .user {
+      font-weight: bold;
+      color: blue;
+    }
+    .bot {
+      font-weight: bold;
+      color: green;
+    }
+    .loading {
+      font-style: italic;
+      color: gray;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <h2>n8n KPI Chat</h2>
+  <div id="chat-box"></div>
+  <input id="user-input" type="text" placeholder="Ask about a KPI..." style="width: 80%;" />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    const webhookURL = "https://boothandpartners.app.n8n.cloud/webhook/a97898fc-a0ad-4c27-ae67-dc351216c462";
+
+    function appendMessage(role, text) {
+      const div = document.createElement("div");
+      div.className = "message";
+
+      if (role === "bot") {
+        div.innerHTML = `<span class="${role}">${role}:</span><br>${marked.parse(text)}`;
+      } else {
+        div.innerHTML = `<span class="${role}">${role}:</span> ${text}`;
+      }
+
+      document.getElementById("chat-box").appendChild(div);
+      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+    }
+
+    function appendLoading() {
+      const div = document.createElement("div");
+      div.id = "loading-message";
+      div.className = "message loading";
+      div.textContent = "bot is typing...";
+      document.getElementById("chat-box").appendChild(div);
+      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+    }
+
+    function removeLoading() {
+      const loadingDiv = document.getElementById("loading-message");
+      if (loadingDiv) loadingDiv.remove();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById("user-input");
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      appendMessage("user", userMessage);
+      input.value = "";
+      appendLoading();
+
+      try {
+        const response = await fetch(webhookURL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage })
+        });
+
+        const data = await response.text();
+        console.log("✅ Webhook response:", data);
+
+        removeLoading();
+
+        if (data) {
+          appendMessage("bot", data);
+        } else {
+          appendMessage("bot", "⚠️ No reply received.");
+        }
+      } catch (error) {
+        removeLoading();
+        appendMessage("bot", "❌ Error connecting to n8n.");
+        console.error("Webhook error:", error);
+      }
+    }
+
+    // 🚀 Listen for "Enter" key on input field
+    document.getElementById("user-input").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault(); // Prevent form submission or unwanted line breaks
+        sendMessage();
+      }
+    });
+  </script>
+</body>
+</html>
