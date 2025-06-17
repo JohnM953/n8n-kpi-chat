@@ -2,68 +2,168 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>n8n KPI Chat</title>
+  <title>DataWiki Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 50px auto;
+    * {
+      box-sizing: border-box;
     }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .banner {
+      background-color: #007bff;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     #chat-box {
-      border: 1px solid #ccc;
-      padding: 10px;
-      height: 400px;
-      overflow-y: scroll;
-      background: #f9f9f9;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column-reverse;
+      overflow-y: auto;
+      padding: 20px;
+      background-color: #f1f1f1;
     }
+
     .message {
       margin: 10px 0;
+      padding: 12px 16px;
+      border-radius: 20px;
+      max-width: 80%;
+      word-wrap: break-word;
+      line-height: 1.5;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
     }
-    .user {
-      font-weight: bold;
-      color: blue;
-    }
+
     .bot {
-      font-weight: bold;
-      color: green;
+      align-self: flex-start;
+      background-color: #ffffff;
+      color: #333;
     }
+
+    .user {
+      align-self: flex-end;
+      background-color: #007bff;
+      color: white;
+    }
+
     .loading {
       font-style: italic;
       color: gray;
+    }
+
+    #input-area {
+      padding: 15px;
+      background-color: #ffffff;
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+      border-top: 1px solid #ddd;
+    }
+
+    #user-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.2s ease;
+    }
+
+    #user-input:focus {
+      border-color: #007bff;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: white;
+      font-size: 16px;
+      font-weight: 500;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 600px) {
+      .banner {
+        font-size: 16px;
+        padding: 15px;
+      }
+      .message {
+        font-size: 15px;
+      }
+      button {
+        padding: 10px 16px;
+        font-size: 15px;
+      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-  <h2>n8n KPI Chat</h2>
+
+  <div class="banner">
+    Welcome to DataWiki! Your one-stop AI interface where you can ask questions about KPIs.
+  </div>
+
   <div id="chat-box"></div>
-  <input id="user-input" type="text" placeholder="Ask about a KPI..." style="width: 80%;" />
-  <button onclick="sendMessage()">Send</button>
+
+  <div id="input-area">
+    <input id="user-input" type="text" placeholder="Ask about a KPI..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
 
   <script>
     const webhookURL = "https://boothandpartners.app.n8n.cloud/webhook/a97898fc-a0ad-4c27-ae67-dc351216c462";
 
+    function scrollToBottom() {
+      const chatBox = document.getElementById("chat-box");
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
     function appendMessage(role, text) {
       const div = document.createElement("div");
-      div.className = "message";
+      div.className = `message ${role}`;
 
       if (role === "bot") {
-        div.innerHTML = `<span class="${role}">${role}:</span><br>${marked.parse(text)}`;
+        div.innerHTML = marked.parse(text);
       } else {
-        div.innerHTML = `<span class="${role}">${role}:</span> ${text}`;
+        div.textContent = text;
       }
 
-      document.getElementById("chat-box").appendChild(div);
-      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+      document.getElementById("chat-box").prepend(div);
+      scrollToBottom();
     }
 
     function appendLoading() {
       const div = document.createElement("div");
       div.id = "loading-message";
-      div.className = "message loading";
+      div.className = "message loading bot";
       div.textContent = "bot is typing...";
-      document.getElementById("chat-box").appendChild(div);
-      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+      document.getElementById("chat-box").prepend(div);
+      scrollToBottom();
     }
 
     function removeLoading() {
@@ -88,8 +188,6 @@
         });
 
         const data = await response.text();
-        console.log("✅ Webhook response:", data);
-
         removeLoading();
 
         if (data) {
@@ -104,13 +202,17 @@
       }
     }
 
-    // 🚀 Listen for "Enter" key on input field
     document.getElementById("user-input").addEventListener("keydown", function (event) {
       if (event.key === "Enter") {
-        event.preventDefault(); // Prevent form submission or unwanted line breaks
+        event.preventDefault();
         sendMessage();
       }
     });
+
+    // Optional: Auto-focus on input field on load
+    window.onload = () => {
+      document.getElementById("user-input").focus();
+    };
   </script>
 </body>
 </html>
